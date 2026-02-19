@@ -1,0 +1,76 @@
+/* 1. ใช้คำสั่งนำเข้าแบบใหม่ของ v4 แทน 3 บรรทัดเดิม */
+@import "tailwindcss";
+
+/* 2. สไตล์เดิมที่น้องเขียนไว้ พี่ปรับให้เข้ากับระบบใหม่ครับ */
+html {
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+    /* Scale down slightly on mobile */
+  }
+}
+
+@media (min-width: 1920px) {
+  html {
+    font-size: 18px;
+    /* Scale up on ultra-wide */
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0a0f1c;
+  /* สีน้ำเงินเข้ม CORP-X */
+  height: 100%;
+  width: 100%;
+  font-family: 'LINE Seed Sans TH', 'Noto Sans Thai', sans-serif !important;
+  font-style: normal !important;
+  overflow-x: hidden;
+}
+
+/* Force spacing on everything */
+* {
+  letter-spacing: 0.1em !important;
+}
+
+/* Force override any italic classes */
+.italic,
+i,
+em {
+  font-style: normal !important;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fluid Layout Utilities */
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1.5rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

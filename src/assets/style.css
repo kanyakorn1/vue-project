@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ถ้าอยากให้ฟอนต์สวยเหมือนในรูป ให้เพิ่มฟอนต์ตรงนี้ได้เลย */
+body {
+    font-family: 'LINE Seed Sans TH', sans-serif;
+}
