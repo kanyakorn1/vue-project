@@ -168,7 +168,7 @@
   import { ref, computed, onMounted } from 'vue';
   import api from '@/api'
   
-  const props = defineProps(['userEmail', 'userRole'])
+  const props = defineProps(['userEmail', 'userRole', 'userName'])
   const viewDate = ref(new Date());
   const tasks = ref([]);
   const showAddModal = ref(false);
@@ -222,8 +222,28 @@
   });
   
   const fetchMissions = async () => {
-    const d = await api.getTasks();
-    tasks.value = (d || []).filter(t => !t.assignedTo || t.assignedTo === props.userEmail);
+    const allData = await api.getTasks();
+    const myEmail = props.userEmail;
+    const myName = props.userName || localStorage.getItem('userName');
+
+    tasks.value = (allData || []).filter(t => {
+      // 1. เห็นงานของตัวเอง (Matched by staffId or assignee or name)
+      const isMine = (
+        (t.staffId && String(t.staffId) === String(myEmail)) || 
+        (t.assignedTo && String(t.assignedTo) === String(myEmail)) ||
+        (t.assignee && myName && String(t.assignee).toLowerCase() === String(myName).toLowerCase()) ||
+        (t.staffName && myName && String(t.staffName).toLowerCase() === String(myName).toLowerCase())
+      );
+      
+      // 2. เห็นกำหนดส่งโครงการใหญ่ (Global projects)
+      const isBigProject = (t.type === 'project');
+      
+      // 3. เห็นวันที่นัดหมาย (Appointments/Events)
+      const isAppointment = (t.type === 'appointment' || t.type === 'event' || t.type === 'meeting');
+      
+      // กรองออก: ถ้าไม่ใช่โครงการใหญ่ และ ไม่ใช่นัดหมายกลาง และ ไม่ใช่งานของตัวเอง -> ไม่ต้องเห็น
+      return isMine || isBigProject || isAppointment;
+    });
   }
   onMounted(fetchMissions)
   

@@ -300,17 +300,17 @@
     <Transition name="modal">
       <div v-if="showReturnModal" class="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
         <div class="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl relative text-left animate-pop">
-          <h3 class="text-2xl font-black text-slate-900 uppercase mb-2 italic tracking-tighter">REQUEST INFORMATION</h3>
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">SEND A MESSAGE TO {{ selectedDetailReport?.submittedBy }}</p>
+          <h3 class="text-2xl font-black text-slate-900 uppercase mb-2 italic tracking-tighter">ระบุสิ่งที่แก้ไข</h3>
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">ส่งข้อความกลับไปที่ {{ selectedDetailReport?.submittedBy }}</p>
           
           <textarea v-model="reviewFeedback" rows="4" placeholder="ระบุสิ่งที่ต้องการเพิ่มเติม..." class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] outline-none font-bold text-sm text-slate-700 placeholder:text-slate-300 resize-none focus:border-indigo-500/30 transition-all"></textarea>
           
           <div class="flex gap-4 mt-8">
             <button @click="confirmReturn" class="flex-1 py-4 bg-[#5c56f0] text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all">
-              SEND REQUEST
+              ส่งคำขอแก้ไข
             </button>
              <button @click="showReturnModal = false" class="flex-1 py-4 bg-slate-100 text-slate-400 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
-              CANCEL
+              ยกเลิก
             </button>
           </div>
         </div>
@@ -335,7 +335,11 @@ const props = defineProps({
     default: () => []
   },
   userRole: String,
-  refreshTrigger: Number
+  refreshTrigger: Number,
+  projects: {
+    type: Array,
+    default: () => []
+  }
 })
 
 import { watch } from 'vue'
@@ -344,6 +348,11 @@ watch(() => props.refreshTrigger, () => {
     console.log('[MANAGER] Refreshing dashboard...')
     fetchDashboardData()
 })
+
+// Also refresh when staff data arrives
+watch(() => props.allStaff, () => {
+    fetchDashboardData()
+}, { deep: true })
 
 const viewMode = ref('overview')
 const isActivityExpanded = ref(true)
@@ -396,7 +405,6 @@ const dashStats = ref([
   { label: 'โครงการทั้งหมด', value: '0', icon: 'fas fa-folder-open', bgColor: 'bg-emerald-500', trend: '+2.5%' },
   { label: 'ทีมที่ใช้งานอยู่', value: '0', icon: 'fas fa-users', bgColor: 'bg-teal-500', trend: 'คงที่' },
   { label: 'ประสิทธิภาพ', value: '0%', icon: 'fas fa-chart-line', bgColor: 'bg-cyan-500', trend: '+5.2%' },
-  { label: 'การใช้งบประมาณ', value: '68%', icon: 'fas fa-wallet', bgColor: 'bg-blue-500', trend: 'เหมาะสม' },
   { label: 'รออนุมัติ', value: '0', icon: 'fas fa-stamp', bgColor: 'bg-amber-500', trend: 'รอการดำเนินการ' }
 ])
 
@@ -412,10 +420,15 @@ const fetchDashboardData = async () => {
         const stats = await api.getStats()
         if (stats) {
              dashStats.value[0].value = stats.activeMissions || '0'
-             dashStats.value[1].value = stats.totalStaff || '0'
-             dashStats.value[2].value = (stats.efficiency || '0') + '%'
-             dashStats.value[3].value = '68%' // Mock budget for now
-             dashStats.value[4].value = stats.pendingIssues || '0'
+             
+             // Use allStaff prop length if available, otherwise fallback to stats
+             const memberCount = (props.allStaff && props.allStaff.length > 0) 
+                ? props.allStaff.length 
+                : (stats.totalStaff || '0')
+             
+             dashStats.value[1].value = memberCount
+             // ประสิทธิภาพ (Efficiency) is now handled by overallEfficiency computed & watcher
+             dashStats.value[3].value = stats.pendingIssues || '0'
         }
 
         // Fetch All Reports (Bypass strict backend filtering, handle in frontend)
@@ -469,13 +482,43 @@ const fetchDashboardData = async () => {
     }
 }
 
-const departments = ref([
-  { name: 'เทคโนโลยีสารสนเทศ', code: 'IT', head: 'Somchai R.', progress: 92, color: 'bg-indigo-500' },
-  { name: 'ออกแบบสร้างสรรค์', code: 'DS', head: 'Vipa S.', progress: 88, color: 'bg-rose-500' },
-  { name: 'ทรัพยากรบุคคล', code: 'HR', head: 'Somsak K.', progress: 95, color: 'bg-amber-500' },
-  { name: 'ทีมการตลาด', code: 'MK', head: 'Anong P.', progress: 85, color: 'bg-pink-500' },
-  { name: 'ทีมขาย', code: 'SF', head: 'Wichai T.', progress: 98, color: 'bg-emerald-500' }
-])
+const departments = computed(() => {
+  const baseDepts = [
+    { name: 'Information Technology', code: 'IT', head: 'Somchai R.', color: 'bg-indigo-500', mapName: ['IT', 'Information Technology'] },
+    { name: 'Creative Design', code: 'DS', head: 'Vipa S.', color: 'bg-rose-500', mapName: ['Design', 'Creative Design', 'DS'] },
+    { name: 'Human Resources', code: 'HR', head: 'Somsak K.', color: 'bg-amber-500', mapName: ['HR', 'Human Resources'] },
+    { name: 'Marketing & Sales', code: 'MK', head: 'Nari M.', color: 'bg-pink-500', mapName: ['Marketing', 'Sales', 'MK', 'Marketing & Sales'] },
+  ]
+
+  return baseDepts.map(dept => {
+    // Calculate KPI using the same logic as Team View
+    const deptProjects = (props.projects || []).filter(p => {
+      const pDept = (p.dept || '').toLowerCase()
+      return dept.mapName.some(n => pDept === n.toLowerCase()) || pDept === dept.code.toLowerCase()
+    })
+
+    const totalTasks = deptProjects.length
+    const completedTasks = deptProjects.filter(p => p.status === 'completed').length
+    const kpi = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+    return {
+      ...dept,
+      progress: kpi
+    }
+  })
+})
+
+const overallEfficiency = computed(() => {
+  if (!departments.value || departments.value.length === 0) return 0
+  const total = departments.value.reduce((sum, d) => sum + (d.progress || 0), 0)
+  return Math.round(total / departments.value.length)
+})
+
+watch(overallEfficiency, (newVal) => {
+  if (dashStats.value && dashStats.value[2]) {
+    dashStats.value[2].value = newVal + '%'
+  }
+}, { immediate: true })
 
 
 

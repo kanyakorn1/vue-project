@@ -113,7 +113,7 @@
               :user-email="userEmail"
               :user-name="userName"
               :user-role="userRole"
-              :projects="activeTab === 'kanban' ? kanbanTasks : (activeTab === 'team' ? allMissions : projects)"
+              :projects="['team', 'dashboard'].includes(activeTab) ? allMissions : (activeTab === 'kanban' ? kanbanTasks : projects)"
               :selected-project="selectedProject"
               :editing-report="activeTab === 'submit-work' ? activeWorkSubmission : editingReport"
               :refresh-trigger="refreshTrigger"

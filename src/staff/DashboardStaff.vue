@@ -154,16 +154,16 @@
           <div class="bg-[#121926] p-8 rounded-[2.5rem] shadow-xl text-left space-y-6 text-white">
             <h3 class="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em]">ดัชนีชี้วัดผลการปฏิบัติงานรายบุคคล (KPI)</h3>
             <div>
-              <p class="text-4xl font-black italic tracking-tighter leading-none">88%</p>
+              <p class="text-4xl font-black italic tracking-tighter leading-none">{{ staffKPI.total }}%</p>
               <p class="text-indigo-300/50 font-black uppercase text-[8px] tracking-widest mt-1">ประสิทธิภาพโดยรวม</p>
             </div>
             <div class="space-y-3 text-left">
               <div class="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-500">
                 <span>เสร็จสิ้น</span>
-                <span>12 ภารกิจ</span>
+                <span>{{ staffKPI.completedCount }} ภารกิจ</span>
               </div>
               <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div class="h-full bg-[#5c56f0] rounded-full" style="width: 88%"></div>
+                <div class="h-full bg-[#5c56f0] rounded-full transition-all duration-1000" :style="{ width: staffKPI.total + '%' }"></div>
               </div>
             </div>
           </div>
@@ -221,6 +221,58 @@
   const myTasks = ref([])
   const showHistory = ref(false)
   
+  // 🎯 KPI Calculation Logic (Deduplicated from TeamView)
+  const staffKPI = computed(() => {
+      const staffTasks = myTasks.value || [];
+      const totalTasks = staffTasks.length;
+      if (totalTasks === 0) return {
+          total: 0, completedCount: 0
+      };
+
+      // 1. ON-TIME (35 คะแนน)
+      const onTimeTasks = staffTasks.filter(t => t.status === 'completed' && t.deadline && new Date(t.completedAt || new Date()) <= new Date(t.deadline)).length;
+      const onTimeScore = (onTimeTasks / totalTasks) * 35;
+
+      // 2. QUALITY (25 คะแนน)
+      const qualitySum = staffTasks.reduce((acc, t) => acc + ((t.qualityRating || 4) / 5) * 25, 0);
+      const qualityScore = qualitySum / totalTasks;
+
+      // 3. REVISION (15 คะแนน)
+      const revisionTasks = staffTasks.filter(t => t.status === 'revision' || t.status === 'returned').length;
+      const issueRate = revisionTasks / totalTasks;
+      const issueScore = (1 - issueRate) * 15;
+
+      // 4. DIFFICULTY (15 คะแนน)
+      const diffSum = staffTasks.reduce((acc, t) => acc + (t.difficulty || 3), 0);
+      const avgDifficulty = diffSum / totalTasks;
+      const difficultyScore = (avgDifficulty / 5) * 15;
+
+      // 5. TIME EFFICIENCY (10 คะแนน)
+      const timeScoreSum = staffTasks.reduce((acc, t) => {
+          const estimated = parseFloat(t.estimatedHours) || 5;
+          const actual = parseFloat(t.actualHours) || 5;
+          let eff = actual > 0 ? estimated / actual : 1;
+          if (eff > 1) eff = 1;
+          return acc + (eff * 10);
+      }, 0);
+      const timeScore = timeScoreSum / totalTasks;
+
+      // BONUS SCORE (Max 10)
+      let bonusScore = 0;
+      staffTasks.forEach(t => {
+          if (t.type === 'urgent' || t.priority === 'urgent') bonusScore += 2;
+          if (t.priority === 'critical') bonusScore += 5;
+          if (t.priority === 'high') bonusScore += 1;
+      });
+      if (bonusScore > 10) bonusScore = 10;
+
+      const totalValue = onTimeScore + qualityScore + issueScore + difficultyScore + timeScore + bonusScore;
+
+      return {
+          total: Math.min(100, Math.round(totalValue)),
+          completedCount: staffTasks.filter(t => t.status === 'completed').length
+      };
+  });
   const filteredTasks = computed(() => {
       if (!myTasks.value) return []
       

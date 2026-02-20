@@ -15,12 +15,12 @@
     </div>
 
     <!-- Kanban Board (7 Stages) -->
-    <div class="flex-1 pb-4 relative z-10 overflow-x-auto overflow-y-hidden custom-scrollbar">
-        <div class="flex gap-4 h-full min-w-[1400px] px-2">
+    <div class="flex-1 pb-4 relative z-10 overflow-x-auto custom-scrollbar flex flex-col min-h-0">
+        <div class="flex gap-4 min-h-[700px] h-full min-w-[1100px] px-2 flex-nowrap">
             
             <div v-for="(col, index) in columnData" :key="col.id" 
-                 class="flex-1 min-w-0 flex flex-col gap-2 animate-fade-up opacity-0"
-                 :style="{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }">
+                 class="flex-1 min-w-0 flex flex-col gap-2 animate-fade-up"
+                 :style="{ animationDelay: `${index * 100}ms` }">
                 
                 <!-- Column Header -->
                 <div class="flex items-center gap-1.5 px-2 mb-1">
@@ -223,32 +223,22 @@ const columnData = computed(() => [
     { 
         id: 'planning', title: 'เตรียมการ', dotColor: 'bg-slate-300', 
         bgColor: 'bg-slate-50/50', borderColor: 'border-slate-100', barColor: 'bg-slate-400',
-        tasks: localTasks.value.filter(t => (t.progress || 0) === 0 && t.status !== 'completed')
+        tasks: localTasks.value.filter(t => (t.progress || 0) === 0 && t.status !== 'completed' && t.status !== 'review' && t.status !== 'returned')
     },
     { 
-        id: 'start', title: 'เริ่มดำเนินการ', dotColor: 'bg-blue-400', 
-        bgColor: 'bg-blue-50/30', borderColor: 'border-blue-100', barColor: 'bg-blue-400',
-        tasks: localTasks.value.filter(t => t.progress > 0 && t.progress <= 25 && t.status !== 'completed')
-    },
-    { 
-        id: 'halfway', title: 'ครึ่งทางส่วน', dotColor: 'bg-indigo-400', 
+        id: 'in-progress', title: 'ดำเนินการ', dotColor: 'bg-indigo-400', 
         bgColor: 'bg-indigo-50/30', borderColor: 'border-indigo-100', barColor: 'bg-indigo-400',
-        tasks: localTasks.value.filter(t => t.progress > 25 && t.progress <= 50 && t.status !== 'completed')
-    },
-    { 
-        id: 'progressing', title: 'คืบหน้าต่อเนื่อง', dotColor: 'bg-purple-400', 
-        bgColor: 'bg-purple-50/30', borderColor: 'border-purple-100', barColor: 'bg-purple-400',
-        tasks: localTasks.value.filter(t => t.progress > 50 && t.progress <= 75 && t.status !== 'completed')
-    },
-    { 
-        id: 'nearing', title: 'ใกล้เสร็จสมบูรณ์', dotColor: 'bg-emerald-400', 
-        bgColor: 'bg-emerald-50/30', borderColor: 'border-emerald-100', barColor: 'bg-emerald-400',
-        tasks: localTasks.value.filter(t => t.progress > 75 && t.progress < 100 && t.status !== 'completed')
+        tasks: localTasks.value.filter(t => (t.progress || 0) > 0 && (t.progress || 0) < 100 && t.status !== 'completed' && t.status !== 'review' && t.status !== 'returned')
     },
     { 
         id: 'review', title: 'รอตรวจสอบ', dotColor: 'bg-amber-400', 
         bgColor: 'bg-amber-50/30', borderColor: 'border-amber-100', barColor: 'bg-amber-400',
-        tasks: localTasks.value.filter(t => t.status === 'review' || (t.progress === 100 && t.status !== 'completed'))
+        tasks: localTasks.value.filter(t => t.status === 'review' || (t.progress === 100 && t.status !== 'completed' && t.status !== 'returned'))
+    },
+    { 
+        id: 'returned', title: 'ถูกส่งกลับ', dotColor: 'bg-rose-400', 
+        bgColor: 'bg-rose-50/30', borderColor: 'border-rose-100', barColor: 'bg-rose-500',
+        tasks: localTasks.value.filter(t => t.status === 'returned' || (t.editRequested && t.status !== 'completed'))
     },
     { 
         id: 'completed', title: 'เสร็จสิ้น', dotColor: 'bg-teal-500', 
@@ -352,6 +342,20 @@ const confirmDelete = async () => {
 </script>
 
 <style scoped>
+@keyframes fade-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fade-down {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@keyframes pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.animate-fade-up { animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-down { animation: fade-down 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-pop { animation: pop 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards; }
+
 .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
@@ -359,8 +363,6 @@ const confirmDelete = async () => {
 
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.3s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-@keyframes pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.animate-pop { animation: pop 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
 
 .dashed-border {
     background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%23CBD5E1FF' stroke-width='1' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");

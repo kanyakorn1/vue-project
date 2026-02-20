@@ -7,7 +7,7 @@
       </div>
       
       <button 
-        v-if="['pm', 'lead', 'manager'].includes(userRole)"
+        v-if="['lead', 'manager'].includes(userRole)"
         @click="generateNewStaff"
         class="bg-[#5c56f0] text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
       >
@@ -693,11 +693,12 @@ const reject = async (req) => {
 
 const departmentStaff = computed(() => {
   if (!selectedDepartment.value) return []
-  return props.allStaff.filter(staff => 
-    staff.dept === selectedDepartment.value.code || 
-    staff.dept === selectedDepartment.value.name ||
-    (selectedDepartment.value.code === 'DS' && staff.dept === 'Design')
-  ).map(staff => ({
+  return props.allStaff.filter(staff => {
+    const sDept = (staff.dept || '').toLowerCase()
+    // Use the same mapping logic as departmentStats
+    return selectedDepartment.value.mapName.some(n => sDept === n.toLowerCase()) || 
+           sDept === selectedDepartment.value.code.toLowerCase()
+  }).map(staff => ({
       ...staff,
       performance: calculateStaffPerformance(staff)
   }))
